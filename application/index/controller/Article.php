@@ -19,7 +19,7 @@ class  Article extends Base
     public function geArticleByfolder($folderId = '')
     {
 
-        $result = Db::name('article')->where('folder_id', '=', $folderId)->select();
+        $result = Db::name('article')->where('folder_id', '=', $folderId)->field('article_id,article_title,folder_id,article_time')->select();
         $count = Db::name('article')->where('folder_id', '=', $folderId)->count();
 
         $return = ['count' => $count, 'data' => $result];
@@ -130,7 +130,7 @@ class  Article extends Base
         $userId = session('userId');
         $user = Db::name('user')->where('user_id', '=', $userId)->find();
         if ($user) {
-            $result = db('part')->delete($articleId);
+            $result = db('article')->delete($articleId);
             if ($result) {
                 $return = ['num' => 100, 'msg' => '删除笔记成功!'];
                 return json_encode($return, JSON_UNESCAPED_UNICODE);
@@ -142,5 +142,20 @@ class  Article extends Base
             $return = ['num' => 103, 'msg' => '用户账号出错,请重新登录操作'];
             return json_encode($return, JSON_UNESCAPED_UNICODE);
         }
+    }
+
+    //搜索所有的文章 匹配参数 标题 和 内容
+    public function searchArticle($keywords = '')
+    {
+        $userId = session('userId');
+        $user = Db::name('user')->where('user_id', '=', $userId)->find();
+        $where['article_title|article_content'] = array('like', '%' . $keywords . '%');
+
+        if ($user) {
+            $list = Db::name('article')->where($where)->select();
+            return json_encode($list, JSON_UNESCAPED_UNICODE);
+        }
+
+
     }
 }
