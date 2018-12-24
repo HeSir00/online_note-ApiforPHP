@@ -32,6 +32,7 @@ class Login extends Validate
 
     protected $scene = [
         'register' => ['user_name' => 'require|min:6', 'user_password', 'u_email'],
-        'change' => ['user_password' => 'user_password'],
+        'editInfo' => ['user_name' => 'require|min:6',  'u_email'],
+        'change' => ['user_password' => 'require'],
     ];
 }

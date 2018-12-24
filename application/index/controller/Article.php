@@ -150,12 +150,9 @@ class  Article extends Base
         $userId = session('userId');
         $user = Db::name('user')->where('user_id', '=', $userId)->find();
         $where['article_title|article_content'] = array('like', '%' . $keywords . '%');
-
         if ($user) {
-            $list = Db::name('article')->where($where)->select();
+            $list = Db::name('article')->where($where)->field('article_title,article_id,article_time,folder_id')->select();
             return json_encode($list, JSON_UNESCAPED_UNICODE);
         }
-
-
     }
 }
