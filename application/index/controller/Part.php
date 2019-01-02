@@ -27,9 +27,8 @@ class Part extends Base
     }
 
     /*添加*/
-    public function add($partName = '')
+    public function add($partName = '', $userId = '')
     {
-        $userId = session('userId');
         $data = [
             'part_name' => $partName,
             'user_id' => $userId

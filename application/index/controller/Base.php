@@ -32,7 +32,6 @@ class Base extends Controller
             return json_encode($return, JSON_UNESCAPED_UNICODE);
 
 //
-
         }
     }
 

@@ -15,59 +15,114 @@ use think\Loader;
 use think\Validate;
 use app\index\model\Folder as FolderModel;
 
-class Folder extends Controller
+
+
+class Folder extends Base
 {
 
 
-    public function lis()
+    /* 获取所有的 文件夹*/
+    public function getTree($userId = '')
     {
-        $userId = session('userId');
-        $categoryList = Db::name('part')->where('user_id', '=', $userId)
-            ->select();
-        foreach ($categoryList as $key => $value) {
-            //第二个数据库查询，与第一个数据库某字段相关联
-            $categoryList[$key]['children'] = Db::name('folder')->where('part_id', $value['part_id'])
-                ->field('folder_id,folder_name')->select();
+        $user = Db::name('user')->where('user_id', '=', $userId)->select();
+        if ($user) {
+            $tree = Db::name('folder')->where('user_id', '=', $userId)->select();
+            return json_encode($tree, JSON_UNESCAPED_UNICODE);
+        } else {
         }
-        return json_encode($categoryList, JSON_UNESCAPED_UNICODE);
     }
 
 
-    /*添加*/
-    public function add($folderName = '', $partId = '')
+    /*添加第一级文件夹*/
+    public function createfirstFolder($folderName = '', $userId = '')
     {
-        $userId = session('userId');
+        $user = Db::name('user')->where('user_id', '=', $userId)->select();
+        $folder = Db::name('folder')->where('user_id', '=', $userId)->where('folder_name', '=', $folderName)->select();
         $data = [
             'folder_name' => $folderName,
             'user_id' => $userId,
-            'part_id' => $partId,
+            'folder_parentId' => 0,
+            'folder_level' => 1,
         ];
 
-        $validate = Loader::validate('Folder');
-        if (!$validate->scene('add')->check($data)) {
-            $this->error($validate->getError());
-            die;
-        }
-        $result = Db::name('folder')->insert($data);
-        if ($result) {
-            $return = ['num' => 101, 'msg' => '文件夹添加成功!'];
-            return json_encode($return, JSON_UNESCAPED_UNICODE);
+        if ($user) {
+            if ($folder) {
+                $return = ['num' => 103, 'msg' => '文件名称已经存在!'];
+                return json_encode($return, JSON_UNESCAPED_UNICODE);
+            } else {
+                $validate = Loader::validate('Folder');
+                if (!$validate->scene('add')->check($data)) {
+                    $this->error($validate->getError());
+                    die;
+                }
+                $result = Db::name('folder')->insert($data);
+                if ($result) {
+                    $return = ['num' => 101, 'msg' => '文件夹添加成功!'];
+                    return json_encode($return, JSON_UNESCAPED_UNICODE);
+                } else {
+                    $return = ['num' => 102, 'msg' => '添加失败!'];
+                    return json_encode($return, JSON_UNESCAPED_UNICODE);
+                }
+            }
         } else {
-            $return = ['num' => 102, 'msg' => '添加失败!'];
+            $return = ['num' => 110, 'msg' => '没有找到用户信息!'];
             return json_encode($return, JSON_UNESCAPED_UNICODE);
         }
     }
 
-    /*修改*/
-    public function edit($folderName = '', $folderId = '')
+    /*创建子文件夹 folder*/
+    public function addNewFolder($userId = '', $name = '', $parentId = '', $level = '')
     {
-        $userId = session('userId');
+        $user = Db::name('user')->where('user_id', '=', $userId)->select();
+        $data = [
+            'folder_name' => $name,
+            'user_id' => $userId,
+            'folder_parentId' => $parentId,
+            'folder_level' => $level,
+        ];
+        if ($user) {
+            $validate = Loader::validate('Folder');
+            if (!$validate->scene('add')->check($data)) {
+                $this->error($validate->getError());
+                die;
+            }
+            $result = Db::name('folder')->insert($data);
+            if ($result) {
+                $return = ['num' => 101, 'msg' => '文件夹添加成功!'];
+                return json_encode($return, JSON_UNESCAPED_UNICODE);
+            } else {
+                $return = ['num' => 102, 'msg' => '添加失败!'];
+                return json_encode($return, JSON_UNESCAPED_UNICODE);
+            }
+
+        } else {
+            $return = ['num' => 110, 'msg' => '没有找到用户信息!'];
+            return json_encode($return, JSON_UNESCAPED_UNICODE);
+        }
+    }
+
+
+//    public function lis()
+//    {
+//        $userId = session('userId');
+//        $categoryList = Db::name('part')->where('user_id', '=', $userId)
+//            ->select();
+//        foreach ($categoryList as $key => $value) {
+//            //第二个数据库查询，与第一个数据库某字段相关联
+//            $categoryList[$key]['children'] = Db::name('folder')->where('part_id', $value['part_id'])
+//                ->field('folder_id,folder_name')->select();
+//        }
+//        return json_encode($categoryList, JSON_UNESCAPED_UNICODE);
+//    }
+
+    /*修改*/
+    public function edit($folderName = '', $folderId = '',$userId= '')
+    {
         $data = [
             'folder_name' => $folderName,
             'folder_id' => $folderId,
-            'user_id' => $userId
         ];
-        $user = Db::name('user')->where('u_id', '=', $userId)->find();
+        $user = Db::name('user')->where('user_id', '=', $userId)->find();
         if ($user) {
             $validate = Loader::validate('Folder');
             if (!$validate->scene('edit')->check($data)) {
@@ -76,7 +131,7 @@ class Folder extends Controller
             }
             $result = Db::name('folder')->update($data);
             if ($result) {
-                $return = ['num' => 100, 'msg' => '修改文件夹成功!'];
+                $return = ['num' => 101, 'msg' => '修改文件夹成功!'];
                 return json_encode($return, JSON_UNESCAPED_UNICODE);
             } else {
                 $return = ['num' => 102, 'msg' => '修改文件失败!'];
@@ -89,17 +144,16 @@ class Folder extends Controller
     }
 
     /*删除*/
-    public function del($folderId = '')
+    public function del($folderId = '',$userId = '')
     {
-        $userId = session('userId');
         $user = Db::name('user')->where('user_id', '=', $userId)->find();
         if ($user) {
             $result = db('folder')->delete($folderId);
             if ($result) {
-                $return = ['num' => 100, 'msg' => '删除文件夹成功!'];
+                $return = ['num' => 101, 'msg' => '删除文件夹成功!'];
                 return json_encode($return, JSON_UNESCAPED_UNICODE);
             } else {
-                $return = ['num' => 100, 'msg' => '删除文件夹失败!'];
+                $return = ['num' => 102, 'msg' => '删除文件夹失败!'];
                 return json_encode($return, JSON_UNESCAPED_UNICODE);
             }
         } else {
@@ -107,6 +161,8 @@ class Folder extends Controller
             return json_encode($return, JSON_UNESCAPED_UNICODE);
         }
     }
+
+
 
 
 }

@@ -16,15 +16,35 @@ use think\Loader;
 class  Article extends Base
 {
 
-    public function geArticleByfolder($folderId = '')
+    public function geArticleByfolder($folderId = '', $userId = '')
     {
 
-        $result = Db::name('article')->where('folder_id', '=', $folderId)->field('article_id,article_title,folder_id,article_time')->select();
-        $count = Db::name('article')->where('folder_id', '=', $folderId)->count();
+        $user = Db::name('user')->where('user_id', '=', $userId)->select();
+        if ($user) {
+            $articleTitle = Db::name('article')
+                ->where('user_id', '=', $userId)
+                ->where('folder_id', '=', $folderId)
+                ->field('article_id,article_title,folder_id,article_time,article_state')
+                ->select();
+            $articleCount = Db::name('article')->where('folder_id', '=', $folderId)->count();
 
-        $return = ['count' => $count, 'data' => $result];
+            $folder = Db::name('folder')->where('user_id', '=', $userId)->where('folder_parentId', '=', $folderId)->select();
+            $folderCount = Db::name('folder')
+                ->where('user_id', '=', $userId)
+                ->where('folder_parentId', '=', $folderId)
+                ->count();
 
-        return json_encode($return, JSON_UNESCAPED_UNICODE);
+            $count = $articleCount + $folderCount;
+
+
+            $resultData = [
+                'count' => $count,
+                'folder' => $folder,
+                'articles' => $articleTitle
+            ];
+            return json_encode($resultData, JSON_UNESCAPED_UNICODE);
+
+        }
 
 
     }
@@ -36,12 +56,13 @@ class  Article extends Base
         return json_encode($result, JSON_UNESCAPED_UNICODE);
     }
 
-    public function getContentByarticleId($articleId = '')
+    public function getArticleContent($articleId = '')
     {
         $result = Db::name('article')->where('article_id', '=', $articleId)->select();
         return json_encode($result, JSON_UNESCAPED_UNICODE);
     }
 
+    //新建标题 文件 或者 MD
     public function add($articleTitle = '', $folderId = '')
     {
         $userId = session('userId');
@@ -93,14 +114,15 @@ class  Article extends Base
 
     /*编辑*/
 
-    public function edit($articleTitle = '', $articleContent = '', $articleId = '', $articleContentCode = '')
+    public function edit($userId = '', $articleTitle = '', $articleContent = '', $articleId = '', $articleContentMd = '')
     {
-        $userId = session('userId');
+
         $data = [
+            'user_id' => $userId,
             'article_id' => $articleId,
             'article_title' => $articleTitle,
             'article_content' => $articleContent,
-            'article_content_code' => $articleContentCode,
+            'article_content_md' => $articleContentMd,
         ];
 
         $user = Db::name('user')->where('user_id', '=', $userId)->find();
@@ -112,7 +134,7 @@ class  Article extends Base
             }
             $result = Db::name('article')->update($data);
             if ($result) {
-                $return = ['num' => 100, 'msg' => '笔记编辑成功!'];
+                $return = ['num' => 101, 'msg' => '笔记编辑成功!'];
                 return json_encode($return, JSON_UNESCAPED_UNICODE);
             } else {
                 $return = ['num' => 102, 'msg' => '笔记编辑失败!'];
@@ -145,14 +167,23 @@ class  Article extends Base
     }
 
     //搜索所有的文章 匹配参数 标题 和 内容
-    public function searchArticle($keywords = '')
+    public function searchArticle($keywords = '', $userId = '')
     {
-        $userId = session('userId');
+
         $user = Db::name('user')->where('user_id', '=', $userId)->find();
+
+
         $where['article_title|article_content'] = array('like', '%' . $keywords . '%');
         if ($user) {
-            $list = Db::name('article')->where($where)->field('article_title,article_id,article_time,folder_id')->select();
-            return json_encode($list, JSON_UNESCAPED_UNICODE);
+            $list = Db::name('article')->where($where)->field('article_id,article_title,folder_id,article_time,article_state')->select();
+
+            $count = Db::name('article')->where($where)->count();
+            $resultData = [
+                'count' => $count,
+                'articles' => $list
+            ];
+
+            return json_encode($resultData, JSON_UNESCAPED_UNICODE);
         }
     }
 }
