@@ -16,7 +16,6 @@ use think\Validate;
 use app\index\model\Folder as FolderModel;
 
 
-
 class Folder extends Base
 {
 
@@ -116,7 +115,7 @@ class Folder extends Base
 //    }
 
     /*修改*/
-    public function edit($folderName = '', $folderId = '',$userId= '')
+    public function edit($folderName = '', $folderId = '', $userId = '')
     {
         $data = [
             'folder_name' => $folderName,
@@ -144,12 +143,16 @@ class Folder extends Base
     }
 
     /*删除*/
-    public function del($folderId = '',$userId = '')
+    public function delbyFolderId($folderId = '', $userId = '')
     {
         $user = Db::name('user')->where('user_id', '=', $userId)->find();
+
         if ($user) {
             $result = db('folder')->delete($folderId);
             if ($result) {
+                db('folder')->where('folder_parentId', '=', $folderId)->delete();
+
+                db('article')->where('folder_id', '=', $folderId)->delete();
                 $return = ['num' => 101, 'msg' => '删除文件夹成功!'];
                 return json_encode($return, JSON_UNESCAPED_UNICODE);
             } else {
@@ -161,8 +164,6 @@ class Folder extends Base
             return json_encode($return, JSON_UNESCAPED_UNICODE);
         }
     }
-
-
 
 
 }

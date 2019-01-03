@@ -63,13 +63,14 @@ class  Article extends Base
     }
 
     //新建标题 文件 或者 MD
-    public function add($articleTitle = '', $folderId = '')
+    public function add($folderId = '', $userId = '')
     {
-        $userId = session('userId');
+        $articleTitle = '未命名Markdown';
         $data = [
             'article_title' => $articleTitle,
             'user_id' => $userId,
             'folder_id' => $folderId,
+            'article_state' => 2,
             'article_time' => time(),
         ];
         $validate = Loader::validate('Article');
@@ -147,17 +148,34 @@ class  Article extends Base
     }
 
     /*删除*/
-    public function del($articleId = '')
+    public function delById($articleId = '',$userId='')
     {
-        $userId = session('userId');
         $user = Db::name('user')->where('user_id', '=', $userId)->find();
         if ($user) {
             $result = db('article')->delete($articleId);
             if ($result) {
-                $return = ['num' => 100, 'msg' => '删除笔记成功!'];
+                $return = ['num' => 101, 'msg' => '删除笔记成功!'];
                 return json_encode($return, JSON_UNESCAPED_UNICODE);
             } else {
-                $return = ['num' => 100, 'msg' => '删除笔记失败!'];
+                $return = ['num' => 102, 'msg' => '删除笔记失败!'];
+                return json_encode($return, JSON_UNESCAPED_UNICODE);
+            }
+        } else {
+            $return = ['num' => 103, 'msg' => '用户账号出错,请重新登录操作'];
+            return json_encode($return, JSON_UNESCAPED_UNICODE);
+        }
+    }
+    public function delByFolderId($folderId = '',$userId='')
+    {
+        $user = Db::name('user')->where('user_id', '=', $userId)->find();
+        if ($user) {
+            $result = db('article')->where('folder_id','=' ,$folderId)->delete();
+            if ($result) {
+                db('folder')->delete($folderId);
+                $return = ['num' => 101, 'msg' => '删除笔记成功!'];
+                return json_encode($return, JSON_UNESCAPED_UNICODE);
+            } else {
+                $return = ['num' => 102, 'msg' => '删除笔记失败!'];
                 return json_encode($return, JSON_UNESCAPED_UNICODE);
             }
         } else {
